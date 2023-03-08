@@ -65,6 +65,7 @@ Param (
     [Parameter(Mandatory = $true)]
     [System.String]$ArcSourceServer,
     [System.String]$AgentProxy,
+    [System.String]$PrivateLinkScope,
     [switch]$AssessOnly
 )
 
@@ -291,7 +292,13 @@ Function Connect-ArcAgent {
     if ($AgentProxy -ne "") {
         $Proxyconf = & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" config set proxy.url $AgentProxy
     }
-    $ConnectionOutput = & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --service-principal-id $servicePrincipalClientId --service-principal-secret $sps --resource-group $ResourceGroup --tenant-id $tenantid --location $location --subscription-id $subscriptionid --cloud AzureCloud --tags $FinalTag --correlation-id "478b97c2-9310-465a-87df-f21e66c2b248"
+
+    if ($PrivateLinkScope -ne "") {
+        $ConnectCmd = "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --service-principal-id $servicePrincipalClientId --service-principal-secret $sps --resource-group $ResourceGroup --tenant-id $tenantid --location $location --subscription-id $subscriptionid --cloud AzureCloud --tags $FinalTag --correlation-id "478b97c2-9310-465a-87df-f21e66c2b248"
+    } else {
+        $ConnectCmd = "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --service-principal-id $servicePrincipalClientId --service-principal-secret $sps --resource-group $ResourceGroup --tenant-id $tenantid --location $location --subscription-id $subscriptionid --cloud AzureCloud --private-link-scope $PrivateLinkScope --tags $FinalTag --correlation-id "478b97c2-9310-465a-87df-f21e66c2b248"
+    }
+    $ConnectionOutput = & $ConnectCmd
     
 
     if ($LastExitCode -eq 0) {

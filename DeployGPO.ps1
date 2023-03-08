@@ -69,6 +69,8 @@ Param (
     [Parameter(Mandatory = $True)]
     [System.String]$TenantId,
 
+    [System.String] $PrivateLinkScope,
+
     [System.String]$AgentProxy,
     
     [switch]$AssessOnly
@@ -205,6 +207,16 @@ if ($PSBoundParameters.ContainsKey('AgentProxy')) {
     catch { Write-Host "Could not add Proxy Information:`n$(($_.Exception).Message)" -ForegroundColor Red ; exit }
     
 } 
+elseif ($PSBoundParameters.ContainsKey('PrivateLinkScope') {
+    Write-Host "`nAdding SourceServerFQDN $SourceServerFQDN with PrivateLink scope $PrivateLinkScope to the scheduled task ..." -ForegroundColor Green
+
+    try {
+        $xmlcontent = Get-Content -Path $ScheduledTaskfile -ErrorAction Stop
+        ($xmlcontent -replace "EnableAzureArc.ps1 -ArcRemoteShare", "EnableAzureArc.ps1 -ArcSourceServer $SourceServerFQDN -PrivateLinkScipe $PrivateLinkScope -ArcRemoteShare") | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
+        Write-Host "SourceServerFQDN and PrivateLinkScope was successfully added to the scheduled task" -ForegroundColor Green
+    }
+    catch { Write-Host "Could not add SourceServerFQDN:`n$(($_.Exception).Message)" -ForegroundColor Red ; exit }
+}
 else {
     Write-Host "`nAdding SourceServerFQDN $SourceServerFQDN to the scheduled task ..." -ForegroundColor Green
 
