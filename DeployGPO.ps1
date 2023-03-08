@@ -36,7 +36,7 @@
    This example deploys the GPO to the contoso.com domain and copies the onboarding script EnableAzureArc.ps1
    to the remote share AzureArcOnBoard in the Server.contoso.com server
 
-   .\DeployGPO.ps1 -DomainFQDN contoso.com -ReportServerFQDN Server.contoso.com -ArcRemoteShare AzureArcOnBoard -ServicePrincipalSecret $ServicePrincipalSecret 
+   .\DeployGPO.ps1 -DomainFQDN contoso.com -ReportServerFQDN Server.contoso.com -ArcSourceServer AzureArcOnBoard -ServicePrincipalSecret $ServicePrincipalSecret 
        -ServicePrincipalClientId $ServicePrincipalClientId -SubscriptionId $SubscriptionId --ResourceGroup $ResourceGroup -Location $Location -TenantId $TenantId 
        [-AgentProxy $AgentProxy]
 
@@ -199,7 +199,7 @@ if ($PSBoundParameters.ContainsKey('AgentProxy')) {
         # DTM PATCH
         # Remove the -RemoteServerFQDN parameter from the scheduled task
         #
-        ($xmlcontent -replace "EnableAzureArc.ps1 -ArcRemoteShare", "EnableAzureArc.ps1 -ArcShareServerFQDN $SourceServerFQDN -AgentProxy $AgentProxy -ArcRemoteShare") | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
+        ($xmlcontent -replace "EnableAzureArc.ps1 -ArcRemoteShare", "EnableAzureArc.ps1 -ArcSourceServer $SourceServerFQDN -AgentProxy $AgentProxy -ArcRemoteShare") | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
         Write-Host "Proxy information was successfully added to the scheduled task" -ForegroundColor Green
     }
     catch { Write-Host "Could not add Proxy Information:`n$(($_.Exception).Message)" -ForegroundColor Red ; exit }
@@ -210,7 +210,7 @@ else {
 
     try {
         $xmlcontent = Get-Content -Path $ScheduledTaskfile -ErrorAction Stop
-        ($xmlcontent -replace "EnableAzureArc.ps1 -ArcRemoteShare", "EnableAzureArc.ps1 -ArcShareServerFQDN $SourceServerFQDN -ArcRemoteShare") | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
+        ($xmlcontent -replace "EnableAzureArc.ps1 -ArcRemoteShare", "EnableAzureArc.ps1 -ArcSourceServer $SourceServerFQDN -ArcRemoteShare") | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
         Write-Host "SourceServerFQDN was successfully added to the scheduled task" -ForegroundColor Green
     }
     catch { Write-Host "Could not add SourceServerFQDN:`n$(($_.Exception).Message)" -ForegroundColor Red ; exit }
