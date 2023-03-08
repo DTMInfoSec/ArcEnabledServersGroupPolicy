@@ -37,7 +37,7 @@ More information can be found [here](https://learn.microsoft.com/en-us/azure/azu
 
 - Execute the deployment script *DeployGPO.ps1*, with the following syntax:
   
-        .\DeployGPO.ps1 -DomainFQDN contoso.com -ReportServerFQDN Server.contoso.com -ArcRemoteShare AzureArcOnBoard -ServicePrincipalSecret $ServicePrincipalSecret 
+        .\DeployGPO.ps1 -DomainFQDN contoso.com -ArcShareServerFQDN Server.contoso.com -ArcRemoteShare AzureArcOnBoard -ServicePrincipalSecret $ServicePrincipalSecret 
        -ServicePrincipalClientId $ServicePrincipalClientId -SubscriptionId $SubscriptionId --ResourceGroup $ResourceGroup -Location $Location -TenantId $TenantId 
        [-AgentProxy $AgentProxy]
 
@@ -45,9 +45,9 @@ More information can be found [here](https://learn.microsoft.com/en-us/azure/azu
 
     - *DomainFQDN* is the fully qualified domain name of the domain
     
-    - *ReportServerFQDN* is the Fully Qualified Domain Name of the host where the network share resides.
+    - *ArcShareServerFQDN* is the Fully Qualified Domain Name of the host where the network share holding the agent MSI resides.
     
-    - *ArcRemoteShare* is the name of the network share you've created
+    - *ArcRemoteShare* is the name of the network share you've created, defaults to "AzureArcOnboard"
     
     - *ServicePrincipalSecret* is the secret from the Service Principal created previously.
     

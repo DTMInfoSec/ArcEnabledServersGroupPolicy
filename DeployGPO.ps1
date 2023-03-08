@@ -18,7 +18,7 @@
 .PARAMETER DomainFQDN
    FQDN of the Domain to Deploy e.g. contoso.com
 
-.PARAMETER ReportServerFQDN
+.PARAMETER SourceServerFQDN
    FQDN of the Server that will act as report Server (and source files)
 
 .PARAMETER ServicePrincipalSecret
@@ -27,7 +27,7 @@
    https://docs.microsoft.com/en-us/azure/azure-arc/servers/onboard-service-principal#create-a-service-principal-for-onboarding-at-scale
    
 .PARAMETER ArcRemoteShare
-   Remote share that holds deployment source files and reporting files
+   Remote share that holds deployment source files and reporting files. Default is AzureArcOnBoard.
 
 .PARAMETER AgentProxy
    proxy address used by the Agent
@@ -45,28 +45,32 @@
 Param (
     [Parameter(Mandatory = $True)]
     [System.String]$DomainFQDN,
-    [Parameter(Mandatory = $True)]
-    [System.String]$ReportServerFQDN, # "server.contoso.com"
     
     [Parameter(Mandatory = $True)]
+    [System.String]$SourceServerFQDN, # "server.contoso.com"
+    
+    [System.String]$ArcRemoteShare = "AzureArcOnBoard",
+
+    [Parameter(Mandatory = $True)]
     [System.String]$ServicePrincipalClientId,
+    
     [Parameter(Mandatory = $True)]
     [System.String]$ServicePrincipalSecret,
     
     [Parameter(Mandatory = $True)]
     [System.String]$SubscriptionId,
+    
     [Parameter(Mandatory = $True)]
     [System.String]$ResourceGroup,
+    
     [Parameter(Mandatory = $True)]
     [System.String]$Location,
 
     [Parameter(Mandatory = $True)]
     [System.String]$TenantId,
 
-    [Parameter(Mandatory = $True)]
-    [System.String]$ArcRemoteShare,
-
     [System.String]$AgentProxy,
+    
     [switch]$AssessOnly
 )
 
@@ -76,7 +80,7 @@ $GPOName = "[MSFT] Azure Arc Servers Onboarding"
 
 #Create the remote folders AzureArcDeploy & AzureArcLogging
 
-$FolderRemotepath = "\\$ReportServerFQDN\$ArcRemoteShare"
+$FolderRemotepath = "\\$SourceServerFQDN\$ArcRemoteShare"
 
 if (-not (Test-Path $FolderRemotepath -ErrorAction SilentlyContinue)) {
     throw "The Path $FolderRemotepath does't exist, please creat it before running this script!!"
@@ -167,8 +171,8 @@ Write-Host "`nReplacing the data the scheduled task..." -ForegroundColor Green
 
 try {
     $xmlcontent = Get-Content -Path $ScheduledTaskfile -ErrorAction Stop
-    $xmlcontent -replace "{ReportServerFQDN}", $ReportServerFQDN | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
-    Write-Host "Report Server FQDN $ReportServerFQDN was successfully set in the scheduled task" -ForegroundColor Green
+    $xmlcontent -replace "{SourceServerFQDN}", $SourceServerFQDN | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
+    Write-Host "Source Server FQDN $SourceServerFQDN was successfully set in the scheduled task" -ForegroundColor Green
 
     $xmlcontent = Get-Content -Path $ScheduledTaskfile -ErrorAction Stop
     $xmlcontent -replace "{ArcRemoteShare}", "$ArcRemoteShare" | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
@@ -191,21 +195,25 @@ if ($PSBoundParameters.ContainsKey('AgentProxy')) {
 
     try {
         $xmlcontent = Get-Content -Path $ScheduledTaskfile -ErrorAction Stop
-        ($xmlcontent -replace "EnableAzureArc.ps1 -ArcRemoteShare", "EnableAzureArc.ps1 -ReportServerFQDN $ReportServerFQDN -AgentProxy $AgentProxy -ArcRemoteShare") | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
+        #
+        # DTM PATCH
+        # Remove the -RemoteServerFQDN parameter from the scheduled task
+        #
+        ($xmlcontent -replace "EnableAzureArc.ps1 -ArcRemoteShare", "EnableAzureArc.ps1 -ArcShareServerFQDN $SourceServerFQDN -AgentProxy $AgentProxy -ArcRemoteShare") | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
         Write-Host "Proxy information was successfully added to the scheduled task" -ForegroundColor Green
     }
     catch { Write-Host "Could not add Proxy Information:`n$(($_.Exception).Message)" -ForegroundColor Red ; exit }
     
 } 
 else {
-    Write-Host "`nAdding ReportServerFQDN $ReportServerFQDN to the scheduled task ..." -ForegroundColor Green
+    Write-Host "`nAdding SourceServerFQDN $SourceServerFQDN to the scheduled task ..." -ForegroundColor Green
 
     try {
         $xmlcontent = Get-Content -Path $ScheduledTaskfile -ErrorAction Stop
-        ($xmlcontent -replace "EnableAzureArc.ps1 -ArcRemoteShare", "EnableAzureArc.ps1 -ReportServerFQDN $ReportServerFQDN -ArcRemoteShare") | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
-        Write-Host "ReportServerFQDN was successfully added to the scheduled task" -ForegroundColor Green
+        ($xmlcontent -replace "EnableAzureArc.ps1 -ArcRemoteShare", "EnableAzureArc.ps1 -ArcShareServerFQDN $SourceServerFQDN -ArcRemoteShare") | Out-File $ScheduledTaskfile -Encoding utf8 -Force -ErrorAction Stop
+        Write-Host "SourceServerFQDN was successfully added to the scheduled task" -ForegroundColor Green
     }
-    catch { Write-Host "Could not add ReportServerFQDN:`n$(($_.Exception).Message)" -ForegroundColor Red ; exit }
+    catch { Write-Host "Could not add SourceServerFQDN:`n$(($_.Exception).Message)" -ForegroundColor Red ; exit }
 }
 
 #endregion
@@ -258,7 +266,7 @@ try {
         Write-Host "Install file `'AzureConnectedMachineAgent.msi`' successfully copied to $AzureArcDeployPath" -ForegroundColor Green
     }
 
-    $infoTable = @{"ServicePrincipalClientId"="$ServicePrincipalClientId";"SubscriptionId"="$SubscriptionId";"ResourceGroup"="$ResourceGroup";"Location"="$Location";"TenantId"="$TenantId"}
+    $infoTable = @{"ServicePrincipalClientId" = "$ServicePrincipalClientId"; "SubscriptionId" = "$SubscriptionId"; "ResourceGroup" = "$ResourceGroup"; "Location" = "$Location"; "TenantId" = "$TenantId" }
     $infoTableJSON = $infoTable | ConvertTo-Json -Compress
     
     if (Test-Path "$AzureArcDeployPath\ArcInfo.json" -ErrorAction SilentlyContinue) {

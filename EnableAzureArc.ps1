@@ -33,9 +33,11 @@
         - In case the server is disconnected it logs the last errors from the azcmagent.exe Agent on the shared folder
 
 
-.PARAMETER ReportServerFQDN
+.PARAMETER ArcSourceServer
    FQDN of the Server that will act as report Server (and source files)
-   
+
+.PARAMETER ArcRemoteShare
+    Name of the share folder that will be used to store the source files. Defaults to AzureArcOnBoard
 .PARAMETER AgentProxy
    Url of the proxy in case is used. 
    e.g. : https://proxy.contoso.com:8080
@@ -58,19 +60,24 @@
 #>
 
 Param (
+    [Parameter()]
+    [System.String]$ArcRemoteShare = 'AzureArcOnBoard',
     [Parameter(Mandatory = $true)]
-    [System.String]$ArcRemoteShare,
-    [Parameter(Mandatory = $true)]
-    [System.String]$ReportServerFQDN,
+    [System.String]$ArcSourceServer,
     [System.String]$AgentProxy,
     [switch]$AssessOnly
 )
 
-#Calculate Logging path
-$LoggingNetworkPath = "$((Join-Path -Path "\\$ReportServerFQDN" -ChildPath $ArcRemoteShare) -replace "\\$")" + "\AzureArcLogging"
+#
+# DTM MODIFICATION
+# Remove calls to network logging, as this is not being
+# used in the current implementation.
+#
+# Calculate Logging path
+#$LoggingNetworkPath = "$((Join-Path -Path "\\$ArcSourceServer" -ChildPath $ArcRemoteShare) -replace "\\$")" + "\AzureArcLogging"
 
 #Calculate network full path
-$SourceFilesFullPath = "$((Join-Path -Path "\\$ReportServerFQDN" -ChildPath $ArcRemoteShare) -replace "\\$")" + "\AzureArcDeploy"
+$SourceFilesFullPath = "$((Join-Path -Path "\\$ArcSourceServer" -ChildPath $ArcRemoteShare) -replace "\\$")" + "\AzureArcDeploy"
 
 $arcInfo = Get-Content (Join-Path $SourceFilesFullPath "ArcInfo.json") | ConvertFrom-Json
 
@@ -313,6 +320,15 @@ Function Repair-ArcAgentConnection {
     #$ConnectionOuput = & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --service-principal-id $servicePrincipalClientId --service-principal-secret $RegistrationInfo --resource-group $Agentconfig.resourceGroup --tenant-id $Agentconfig.tenantId --location $Agentconfig.location --subscription-id $Agentconfig.subscriptionId  --cloud $Agentconfig.Cloud --tags $FinalTag --correlation-id $Agentconfig.correlationId
             
 }
+
+<#
+    #    
+    # DTM MODIFICTION
+    #
+    # This function is used to send data to the central shared folder, which
+    # is not being used in this script. The function definition is left here
+    # for reference.
+    #
 Function Send-ArcData {
     [cmdletbinding()]
     Param(
@@ -329,6 +345,7 @@ Function Send-ArcData {
     if ($? -eq $false) { Write-Log -msg "$($error[0].Exception)" -msgtype ERROR }
     
 }
+#>
 Function Test-ArcAgentConnection {
 
     #Check if the Azure Connected Machine Agent is connected
@@ -465,7 +482,12 @@ else {
 #In case the onboarding is in AssessOnly mode, the onboarding process posts the data and exits
 if ($PSBoundParameters.ContainsKey('AssessOnly')) {
     Write-Log -msg "Arc GPO Onboarding is in AssessOnly mode. Remove the -AssessOnly parameter from the scheduled task in the GPO if you want the machines to be onboarded in Azure ARC." -msgtype WARNING
-    Send-ArcData -Data $ArcOnboardingData -Path "$LoggingNetworkPath\$($env:COMPUTERNAME).xml"
+    #
+    # DTM MODIFICATION
+    # Remove calls to Send-ArcData, as this is not being
+    # used in the current implementation.
+    #
+    #Send-ArcData -Data $ArcOnboardingData -Path "$LoggingNetworkPath\$($env:COMPUTERNAME).xml"
     Write-Log -msg "End of the Azure Arc Onboarding process..." -msgtype INFO
     exit
 }
@@ -474,7 +496,13 @@ if ($PSBoundParameters.ContainsKey('AssessOnly')) {
 
 if (($ArcOnboardingData.AzureVM -eq $false) -and ($ArcOnboardingData.ArcCompatible -eq $false)) {
     Write-Log -msg "Machine doesn't meet the minimun requirements for Azure Arc: Windows PowerShell 5.1 and NET Framework 4.6, or it is an Azure VM." -msgtype ERROR
-    Send-ArcData -Data $ArcOnboardingData -Path "$LoggingNetworkPath\$($env:COMPUTERNAME).xml"
+    
+    #
+    # DTM MODIFICATION
+    # Remove calls to Send-ArcData, as this is not being
+    # used in the current implementation.
+    #
+    #Send-ArcData -Data $ArcOnboardingData -Path "$LoggingNetworkPath\$($env:COMPUTERNAME).xml"
     Write-Log -msg "End of the Azure Arc Onboarding process..." -msgtype INFO
 
     exit
@@ -540,8 +568,13 @@ if ((Test-ArcAgentConnection) -eq $false) {
     $ArcOnboardingData.httpsProxy = $ArcAgentInfo.httpsProxy
 
 
-    #Send information to Share Folder
-    Send-ArcData -Data $ArcOnboardingData -Path "$LoggingNetworkPath\NotConnected\$($env:COMPUTERNAME).NotConnected.xml"
+    #
+    # DTM MODIFICATION
+    # Remove calls to Send-ArcData, as this is not being
+    # used in the current implementation.
+    #
+    #
+    #Send-ArcData -Data $ArcOnboardingData -Path "$LoggingNetworkPath\NotConnected\$($env:COMPUTERNAME).NotConnected.xml"
 
 }
 else {
